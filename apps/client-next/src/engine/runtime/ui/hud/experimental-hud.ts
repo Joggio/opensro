@@ -5,7 +5,7 @@ experimental-hud.ts - saved and draft experimental preferences
 
 Opening starts a fresh draft on the first tab. Only Confirm changes
 effective preferences; closing or Escape leaves the saved value intact.
-The window's tabs (Image, World, Chat, Audio, Developer) only choose which rows show;
+The window's tabs (Image, World, Chat, Developer) only choose which rows show;
 every tab edits the same draft.
 
 ===========================================================================
@@ -38,7 +38,8 @@ EXPERIMENTAL_TABS
 
 Port-only, not native. The window's tabs, Options style, at most four rows each: Image holds the
 frame-wide stages (edges, filtering, glow), World the lighting and
-atmosphere stages that deviate from the 2005 look, Chat, Audio and Developer group the other browser-only preferences.
+atmosphere stages that deviate from the 2005 look, Chat and Developer the
+earlier additions.
 ================
 */
 export const EXPERIMENTAL_TABS: readonly {
@@ -108,16 +109,6 @@ export const EXPERIMENTAL_TABS: readonly {
 			id: "experimental-chat-timestamps",
 			label: "Chat timestamps",
 			description: "Show message time on hover."
-		} ]
-	},
-	{
-		title: "Audio",
-		section: "Quiet audio",
-		rows: [ {
-			key: "extendedQuietAudio",
-			id: "experimental-quiet-audio",
-			label: "Extended quiet audio",
-			description: "Adds volume settings below Silkroad's original minimum."
 		} ]
 	},
 	{

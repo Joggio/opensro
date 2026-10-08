@@ -20,8 +20,6 @@ ExperimentalOptions
 export interface ExperimentalOptions {
 	readonly chatTimestamps: boolean;
 	readonly developerDiagnostics: boolean;
-	// Port-only, not native: user levels below the original minimum.
-	readonly extendedQuietAudio: boolean;
 	// Video: renderer stages that deviate from the 2005 D3D9 look.
 	readonly postProcessing: boolean;
 	readonly anisotropicFiltering: boolean;
@@ -56,7 +54,6 @@ export function experimentalOptions( value: unknown = null ): ExperimentalOption
 	return {
 		chatTimestamps: enabled( "chatTimestamps" ),
 		developerDiagnostics: enabled( "developerDiagnostics" ),
-		extendedQuietAudio: enabled( "extendedQuietAudio" ),
 		postProcessing: enabled( "postProcessing" ),
 		anisotropicFiltering: enabled( "anisotropicFiltering" ),
 		heightFog: enabled( "heightFog" ),

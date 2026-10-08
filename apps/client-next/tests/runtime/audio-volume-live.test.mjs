@@ -235,11 +235,10 @@ function fixture( t ) {
 live channel changes
 ================
 */
-test("quiet preferences and opt-in update existing voices independently without rewriting authored gain", async t => {
+test("quiet preferences update existing voices independently without rewriting authored gain", async t => {
 	const f = fixture( t );
 	const settings = { ...initialAudioOptions(), bgm: .02, effects: .1, environment: .5 };
 	f.audio.options( settings );
-	f.audio.extendedQuietAudio( true );
 	f.audio.music( true );
 	/** @type {[string, number, boolean][]} */
 	const events = [ [ "effect", .4, false ], [ "ambient:rain", 1, true ], [ "effect-loop", .6, true ] ];
@@ -269,10 +268,6 @@ test("quiet preferences and opt-in update existing voices independently without 
 	assert.equal( f.gains[1].gain.value, 0 );
 	assert.equal( f.gains[2].gain.value, .6 * audioAmplitude( .2, false ) );
 	assert.equal( f.media[0], media );
-	f.audio.extendedQuietAudio( false );
-	assert.ok( f.gains.every( node => node.gain.value === 0 ) );
-	assert.equal( media.volume, 0 );
-	f.audio.extendedQuietAudio( true );
 	assert.equal( media.volume, audioAmplitude( .02, false ) );
 	f.audio.options( { ...settings, effects: 20, environment: .98 } );
 	assert.equal( f.gains[0].gain.value, .4 * audioAmplitude( 20, false ) );
@@ -292,7 +287,6 @@ restore order
 */
 test("quiet restore order is independent and newly started voices inherit the current gain", async t => {
 	const f = fixture( t );
-	f.audio.extendedQuietAudio( true );
 	f.audio.options( { ...initialAudioOptions(), effects: .02 } );
 	f.audio.enqueue( {
 		id: "new",
@@ -306,8 +300,6 @@ test("quiet restore order is independent and newly started voices inherit the cu
 	} );
 	await f.settle();
 	assert.equal( f.gains[0].gain.value, .75 * audioAmplitude( .02, false ) );
-	f.audio.extendedQuietAudio( false );
-	assert.equal( f.gains[0].gain.value, 0 );
 	f.audio.options( { ...initialAudioOptions(), effects: 1 } );
 	assert.equal( f.gains[0].gain.value, .75 * audioAmplitude( 1, false ) );
 });

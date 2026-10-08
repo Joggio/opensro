@@ -355,7 +355,7 @@ import {
 	type AudioOptions
 } from "@/engine/foundation/audio/options";
 import {
-	audioSliderMax,
+	AUDIO_SLIDER_MAX,
 	audioSliderLevel,
 	audioSliderPosition,
 	stepAudioLevel,
@@ -2296,11 +2296,7 @@ export function createUi(
 			if ( (key === "bgm" || key === "effects" || key === "environment") && (delta === "-1" || delta === "1") ) {
 				updateAudioDraft( {
 					...audioDraft,
-					[key]: stepAudioLevel(
-						audioDraft[key],
-						Number( delta ),
-						experimental.state().saved.extendedQuietAudio
-					)
+					[key]: stepAudioLevel( audioDraft[key], Number( delta ) )
 				} );
 			}
 		} else if ( id === "option-default" ) {
@@ -5466,11 +5462,10 @@ export function createUi(
 					}
 				} else if ( event.id.startsWith( "option-audio:" ) && panel === "Option" ) {
 					const key = event.id.slice( 13 ), n = Number( event.value );
-					const extended = experimental.state().saved.extendedQuietAudio;
 					if (
 						(key === "bgm" || key === "effects" || key === "environment") && Number.isInteger( n ) &&
-						n >= 0 && n <= audioSliderMax( extended )
-					) updateAudioDraft( { ...audioDraft, [key]: audioSliderLevel( n, extended ) } );
+						n >= 0 && n <= AUDIO_SLIDER_MAX
+					) updateAudioDraft( { ...audioDraft, [key]: audioSliderLevel( n ) } );
 				} else if ( event.id.startsWith( "potion-percent:" ) ) {
 					const key = event.id.slice( 15 ), percent = Number( event.value );
 					if (
@@ -9188,7 +9183,7 @@ export function createUi(
 					const layout = hudData.windows.ifoption!, slot = hudData.windows.ifgameoptionslot!;
 					windowBox( "Experimental", px, py, width, height );
 					closeButton( px + width - 26, py + 10 );
-					const tabWidth = 70, tabStart = (width - (EXPERIMENTAL_TABS.length * tabWidth - 2)) / 2;
+					const tabWidth = 78, tabStart = (width - (EXPERIMENTAL_TABS.length * tabWidth - 2)) / 2;
 					for ( let i = 0; i < EXPERIMENTAL_TABS.length; i++ ) {
 						nativeTab(
 							"experimental-tab:" + i,
@@ -9585,7 +9580,6 @@ export function createUi(
 						}
 					}
 					if ( optionTab === 1 ) {
-						const extended = experimental.state().saved.extendedQuietAudio;
 						for (
 							const [i, key, mute] of [ [ 0, "bgm", "muteBgm" ], [ 1, "effects", "muteEffects" ], [
 								2,
@@ -9601,9 +9595,8 @@ export function createUi(
 								c = authoredRect( check, ox, oy ),
 								path = ROOT + "interface/ifcommon/com_radiobutton_" +
 									(audioDraft[mute] ? "on" : "off") + ".png";
-							const position = audioSliderPosition( audioDraft[key], extended ),
-								max = audioSliderMax( extended );
-							const valueText = audioLevelText( audioDraft[key], audioDraft[mute], extended );
+							const position = audioSliderPosition( audioDraft[key] ), max = AUDIO_SLIDER_MAX;
+							const valueText = audioLevelText( audioDraft[key], audioDraft[mute] );
 							paths.push( path );
 							if ( resources.has( path ) ) rect( c, white, path );
 							authoredText( muteLabel, ox, oy, hudCopy( muteLabel.text ) );

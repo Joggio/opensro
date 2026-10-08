@@ -1,39 +1,30 @@
 /*
 ===========================================================================
 
-volume-control.ts - port-only quiet volume slider positions and labels
+volume-control.ts - audio slider positions and their saved levels
 
-The browser range keeps integer steps. Saved values remain SRO levels;
-only the opted-in control gives the sub-1 range additional physical travel.
+The slider's first third (positions 0..50) holds the port's quiet levels
+below the native minimum, 1/50 of level 1's amplitude per step; the rest
+(51..149) are native levels 2..100. Saved values stay SRO levels, so a
+saved integer keeps its native meaning. Port-only, not native.
 
 ===========================================================================
 */
-import { effectiveAudioLevel } from "./options";
 
 export const QUIET_VOLUME_STEPS = 50;
-const NATIVE_VOLUME_MAX = 100;
-// Fifty quiet intervals followed by the remaining ninety-nine native levels.
-const EXTENDED_VOLUME_MAX = 149;
-
-/*
-================
-audioSliderMax
-================
-*/
-export function audioSliderMax( extended: boolean ): number {
-	return extended ? EXTENDED_VOLUME_MAX : NATIVE_VOLUME_MAX;
-}
+// Fifty quiet steps (level 1 is the fiftieth) and the ninety-nine native
+// levels above it.
+export const AUDIO_SLIDER_MAX = 149;
 
 /*
 ================
 audioSliderLevel
 ================
 */
-export function audioSliderLevel( position: number, extended: boolean ): number {
-	if ( !Number.isInteger( position ) || position < 0 || position > audioSliderMax( extended ) ) {
+export function audioSliderLevel( position: number ): number {
+	if ( !Number.isInteger( position ) || position < 0 || position > AUDIO_SLIDER_MAX ) {
 		throw Error( "Invalid audio slider position" );
 	}
-	if ( !extended ) return position;
 	return position <= QUIET_VOLUME_STEPS ? position / QUIET_VOLUME_STEPS : position - QUIET_VOLUME_STEPS + 1;
 }
 
@@ -41,13 +32,11 @@ export function audioSliderLevel( position: number, extended: boolean ): number 
 ================
 audioSliderPosition
 
-Round only the control projection; never normalize a retained saved fraction.
+Round only the control projection; never normalize a saved fraction.
 ================
 */
-export function audioSliderPosition( level: number, extended: boolean ): number {
-	const effective = effectiveAudioLevel( level, extended );
-	if ( !extended ) return effective;
-	return effective < 1 ? Math.round( effective * QUIET_VOLUME_STEPS ) : effective + QUIET_VOLUME_STEPS - 1;
+export function audioSliderPosition( level: number ): number {
+	return level < 1 ? Math.round( level * QUIET_VOLUME_STEPS ) : level + QUIET_VOLUME_STEPS - 1;
 }
 
 /*
@@ -55,13 +44,9 @@ export function audioSliderPosition( level: number, extended: boolean ): number 
 stepAudioLevel
 ================
 */
-export function stepAudioLevel( level: number, delta: number, extended: boolean ): number {
+export function stepAudioLevel( level: number, delta: number ): number {
 	if ( delta !== -1 && delta !== 1 ) throw Error( "Invalid audio slider step" );
-	const position = Math.max(
-		0,
-		Math.min( audioSliderMax( extended ), audioSliderPosition( level, extended ) + delta )
-	);
-	return audioSliderLevel( position, extended );
+	return audioSliderLevel( Math.max( 0, Math.min( AUDIO_SLIDER_MAX, audioSliderPosition( level ) + delta ) ) );
 }
 
 /*
@@ -69,8 +54,7 @@ export function stepAudioLevel( level: number, delta: number, extended: boolean 
 audioLevelText
 ================
 */
-export function audioLevelText( level: number, muted: boolean, extended: boolean ): string {
+export function audioLevelText( level: number, muted: boolean ): string {
 	const selected = level === 0 ? "Silent" : level < 1 ? `Quiet ${String( level )}` : `SRO level ${level}`;
-	if ( !extended && level > 0 && level < 1 ) return `${selected} retained; enable Extended quiet audio to hear it`;
 	return muted ? `${selected} (muted)` : selected;
 }

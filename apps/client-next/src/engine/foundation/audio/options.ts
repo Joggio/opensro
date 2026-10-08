@@ -3,7 +3,11 @@
 
 options.ts - saved audio levels and their playback gain
 
-Preserve native integer levels. Fractional sub-1 levels are port-only, not native.
+Integer levels 1..100 keep the native curve (714180). Below level 1 the
+port adds quiet levels: the native slider spans only 20 dB (0.2 dB per
+level), so its minimum of -19.8 dB is too loud for many players and the
+step from it to silence was the only quiet setting.
+Port-only, not native; the owner made it the default (2026-10-09).
 
 ===========================================================================
 */
@@ -71,26 +75,22 @@ function nativeAudioAmplitude( level: number ): number {
 	return Math.pow( 10, (20 * level - 2000) / 2000 );
 }
 
+// The quiet range spans level 1's amplitude down to 1/QUIET_DEPTH of it.
+const QUIET_DEPTH = 50;
+
 /*
 ================
 audioAmplitude
 
-Port-only, not native: interpolate below level 1 without changing its native branch.
+Levels 1..100 are the native branch unchanged. Below level 1 the gain
+keeps falling by an equal number of decibels per slider step, as the
+native levels do, to about 1/50 of the native minimum (-53 dB); 0 is
+silence. A linear fade there gave the first quiet step a 6 dB jump and
+the top half of the range 6 dB in all.
 ================
 */
 export function audioAmplitude( level: number, muted: boolean ): number {
 	if ( muted || level === 0 ) return 0;
-	if ( level < 1 ) return level * nativeAudioAmplitude( 1 );
+	if ( level < 1 ) return nativeAudioAmplitude( 1 ) * Math.pow( QUIET_DEPTH, level - 1 );
 	return nativeAudioAmplitude( level );
-}
-
-/*
-================
-effectiveAudioLevel
-
-Turning off the port-only extension must never raise a retained quiet setting.
-================
-*/
-export function effectiveAudioLevel( level: number, extended: boolean ): number {
-	return !extended && level < 1 ? 0 : level;
 }

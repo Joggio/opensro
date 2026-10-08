@@ -17,9 +17,7 @@ test(
 	"native options and potion controls publish, persist and cancel through production owners",
 	{ timeout: 90000 },
 	async () => {
-		const { browser, page } = await launchProbeBrowser( {
-			executablePath: process.env.SRO_PROBE_CHROME_EXECUTABLE
-		} );
+		const { browser, page } = await launchProbeBrowser();
 		try {
 			await page.setViewportSize( { width: 1200, height: 900 } );
 			await page.goto( CLIENT_NEXT_BASE_URL );
@@ -223,7 +221,7 @@ test(
 			);
 			await page.screenshot( { path: "temp/artifacts/experimental-options/experimental.png" } );
 			assert.equal( await page.locator( "#developer-toggle" ).isVisible(), false );
-			await click( "experimental-tab:4" );
+			await click( "experimental-tab:3" );
 			await page.screenshot( { path: "temp/artifacts/experimental-options/experimental-developer.png" } );
 			await click( "experimental-developer-diagnostics" );
 			assert.equal(
@@ -247,7 +245,7 @@ test(
 				"false"
 			);
 			assert.equal( await page.locator( "#developer-toggle" ).isVisible(), false );
-			await click( "experimental-tab:4" );
+			await click( "experimental-tab:3" );
 			await click( "experimental-developer-diagnostics" );
 			assert.equal(
 				await page.locator( "#developer-toggle" ).isVisible(),
@@ -281,7 +279,6 @@ test(
 				{
 					chatTimestamps: true,
 					developerDiagnostics: true,
-					extendedQuietAudio: false,
 					postProcessing: false,
 					anisotropicFiltering: false,
 					heightFog: false,
@@ -320,7 +317,6 @@ test(
 				{
 					chatTimestamps: false,
 					developerDiagnostics: false,
-					extendedQuietAudio: false,
 					postProcessing: false,
 					anisotropicFiltering: false,
 					heightFog: false,

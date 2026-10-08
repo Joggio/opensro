@@ -14,7 +14,6 @@ import {
 	initialAudioOptions,
 	audioOptions,
 	audioAmplitude,
-	effectiveAudioLevel,
 	type AudioOptions
 } from "@/engine/foundation/audio/options";
 import { audioLoopEnd } from "@/engine/foundation/audio/loop";
@@ -88,7 +87,6 @@ export function createAudio( assets: AssetOwner, origin: string, random: Present
 	const preparation = createSoundPreparation( assets, origin );
 	let admittedGid = 0, admittedSounds = false;
 	let preferences = initialAudioOptions();
-	let extendedQuietAudio = false;
 	const voiceGains = new Map<AudioBufferSourceNode, { gain: GainNode; level: number; ambient: boolean; }>();
 	/*
 ================
@@ -98,7 +96,7 @@ mixGain
 	function mixGain( level: number, ambient: boolean ) {
 		return level *
 			audioAmplitude(
-				effectiveAudioLevel( ambient ? preferences.environment : preferences.effects, extendedQuietAudio ),
+				ambient ? preferences.environment : preferences.effects,
 				ambient ? preferences.muteEnvironment : preferences.muteEffects
 			);
 	}
@@ -362,22 +360,11 @@ Gain changes preserve live source identity, authored weighting and timers.
 	*/
 	function applyPreferences() {
 		music.volume(
-			audioAmplitude( effectiveAudioLevel( preferences.bgm, extendedQuietAudio ), preferences.muteBgm )
+			audioAmplitude( preferences.bgm, preferences.muteBgm )
 		);
 		for ( const voice of voiceGains.values() ) voice.gain.gain.value = mixGain( voice.level, voice.ambient );
 	}
 	return {
-		/*
-================
-extendedQuietAudio
-
-Port-only, not native. The preferences retain quiet levels while disabled.
-================
-		*/
-		extendedQuietAudio( enabled: boolean ) {
-			extendedQuietAudio = enabled;
-			applyPreferences();
-		},
 		/*
 ================
 options

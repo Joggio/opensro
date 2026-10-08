@@ -418,10 +418,6 @@ test(
 			await page.goto( FIXTURE_URL );
 			await page.evaluate( () => {
 				localStorage.clear();
-				localStorage.setItem(
-					"sro:v1150:experimental-options:1",
-					JSON.stringify( { extendedQuietAudio: true } )
-				);
 			} );
 			await initializeUi( page );
 			for ( const key of [ "bgm", "effects", "environment" ] ) {
@@ -493,43 +489,6 @@ test(
 			await page.reload();
 			await initializeUi( page );
 			assert.equal( await page.locator( '[data-ui-id="option-audio:bgm"]' ).inputValue(), "5" );
-			await page.evaluate( () => {
-				fixture.activate( "open-window:Experimental" );
-				fixture.activate( "experimental-tab:3" );
-				fixture.activate( "experimental-quiet-audio" );
-				fixture.activate( "experimental-cancel" );
-			} );
-			assert.equal(
-				await page.evaluate( () =>
-					JSON.parse( localStorage.getItem( "sro:v1150:experimental-options:1" ) ?? "null" )
-						.extendedQuietAudio
-				),
-				true
-			);
-			await page.evaluate( () => {
-				fixture.activate( "open-window:Experimental" );
-				fixture.activate( "experimental-tab:3" );
-				fixture.activate( "experimental-quiet-audio" );
-				fixture.activate( "experimental-confirm" );
-				fixture.activate( "open-window:Option" );
-				fixture.activate( "option-tab:1" );
-			} );
-			await page.waitForFunction( () => {
-				fixture.draw();
-				return document.querySelector( '[data-ui-id="option-audio:bgm"]' );
-			} );
-			assert.equal( await page.locator( '[data-ui-id="option-audio:bgm"]' ).getAttribute( "max" ), "100" );
-			assert.match(
-				defined( await page.locator( '[data-ui-id="option-audio:bgm"]' ).getAttribute( "aria-valuetext" ) ),
-				/retained/
-			);
-			await page.evaluate( () => fixture.activate( "option-ok" ) );
-			assert.equal(
-				await page.evaluate( () =>
-					JSON.parse( localStorage.getItem( "sro:v1150:audio-options:1" ) ?? "null" ).bgm
-				),
-				.1
-			);
 		} finally {
 			await browser.close();
 		}

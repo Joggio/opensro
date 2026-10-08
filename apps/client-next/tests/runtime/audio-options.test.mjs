@@ -1,23 +1,31 @@
 /*
 ===========================================================================
 
-audio-options.test.mjs - native volume compatibility and port-only quiet controls
+audio-options.test.mjs - native volume compatibility and the quiet range
 
 Exercise shipped functions against an independent native oracle and real
-JSON records. UI positions never reinterpret saved native integer levels.
+JSON records. Slider positions never reinterpret saved native integer levels.
 
 ===========================================================================
 */
 import "../helpers/native-source-loader.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-const { audioAmplitude, audioOptions, effectiveAudioLevel, initialAudioOptions, defaultAudioOptions } = await import(
+const { audioAmplitude, audioOptions, initialAudioOptions, defaultAudioOptions } = await import(
 	"../../src/engine/foundation/audio/options.ts"
 );
-const { audioSliderMax, audioSliderLevel, audioSliderPosition, stepAudioLevel, audioLevelText } = await import(
+const { AUDIO_SLIDER_MAX, audioSliderLevel, audioSliderPosition, stepAudioLevel, audioLevelText } = await import(
 	"../../src/engine/foundation/audio/volume-control.ts"
 );
-const { experimentalOptions } = await import( "../../src/engine/foundation/ui/experimental-options.ts" );
+
+/*
+================
+decibels
+================
+*/
+function decibels( amplitude ) {
+	return 20 * Math.log10( amplitude );
+}
 
 /*
 ================
@@ -27,10 +35,7 @@ native compatibility
 test("all 100 original levels match the original expression exactly", () => {
 	for ( let level = 1; level <= 100; level++ ) {
 		assert.equal( audioAmplitude( level, false ), Math.pow( 10, (20 * level - 2000) / 2000 ) );
-		assert.equal( effectiveAudioLevel( level, false ), level );
-		for ( const extended of [ false, true ] ) {
-			assert.equal( audioSliderLevel( audioSliderPosition( level, extended ), extended ), level );
-		}
+		assert.equal( audioSliderLevel( audioSliderPosition( level ) ), level );
 	}
 	assert.equal( audioAmplitude( 1, false ), Math.pow( 10, -.99 ) );
 	assert.equal( audioAmplitude( 50, false ), Math.pow( 10, -.5 ) );
@@ -42,29 +47,32 @@ test("all 100 original levels match the original expression exactly", () => {
 quiet curve
 ================
 */
-test("quiet controls increase strictly through the native boundary and mute exactly", () => {
+test("quiet steps fall by equal decibels below the native minimum, and 0 is silence", () => {
 	let previous = -1;
-	for ( let position = 0; position <= audioSliderMax( true ); position++ ) {
-		const level = audioSliderLevel( position, true ), amplitude = audioAmplitude( level, false );
-		assert.equal( audioSliderPosition( level, true ), position );
+	const quietSteps = [];
+	for ( let position = 0; position <= AUDIO_SLIDER_MAX; position++ ) {
+		const level = audioSliderLevel( position ), amplitude = audioAmplitude( level, false );
+		assert.equal( audioSliderPosition( level ), position );
 		assert.ok( amplitude > previous );
 		assert.equal( audioAmplitude( level, true ), 0 );
-		if ( level > 0 && level < 1 ) {
-			assert.ok( amplitude > 0 && amplitude < audioAmplitude( 1, false ) );
-			assert.equal( amplitude, level * audioAmplitude( 1, false ) );
-		}
+		if ( position > 1 && level <= 1 ) quietSteps.push( decibels( amplitude ) - decibels( previous ) );
 		previous = amplitude;
 	}
+	// 49 steps from the first quiet level to level 1, each 20 log10(50) / 50 dB.
+	assert.equal( quietSteps.length, 49 );
+	for ( const step of quietSteps ) assert.ok( Math.abs( step - 20 * Math.log10( 50 ) / 50 ) < 1e-9, String( step ) );
+	// The first quiet step is about 1/50 of the native minimum, far below it.
+	assert.ok( Math.abs( decibels( audioAmplitude( .02, false ) ) - (-19.8 - 33.3) ) < .1 );
 	assert.equal( audioAmplitude( 0, false ), 0 );
 	assert.ok( Math.abs( audioAmplitude( 1 - 1e-12, false ) - audioAmplitude( 1, false ) ) < 1e-12 );
-	assert.equal( stepAudioLevel( .98, 1, true ), 1 );
-	assert.equal( stepAudioLevel( 1, 1, true ), 2 );
-	assert.equal( stepAudioLevel( 2, -1, true ), 1 );
-	assert.equal( stepAudioLevel( 1, -1, true ), .98 );
-	assert.equal( stepAudioLevel( 0, 1, true ), .02 );
-	assert.equal( stepAudioLevel( .02, -1, true ), 0 );
-	assert.equal( stepAudioLevel( 0, -1, true ), 0 );
-	assert.equal( stepAudioLevel( 100, 1, true ), 100 );
+	assert.equal( stepAudioLevel( .98, 1 ), 1 );
+	assert.equal( stepAudioLevel( 1, 1 ), 2 );
+	assert.equal( stepAudioLevel( 2, -1 ), 1 );
+	assert.equal( stepAudioLevel( 1, -1 ), .98 );
+	assert.equal( stepAudioLevel( 0, 1 ), .02 );
+	assert.equal( stepAudioLevel( .02, -1 ), 0 );
+	assert.equal( stepAudioLevel( 0, -1 ), 0 );
+	assert.equal( stepAudioLevel( 100, 1 ), 100 );
 });
 
 /*
@@ -80,7 +88,7 @@ test("old integer and new fractional records retain their values and mute flags"
 		assert.notEqual( audioOptions( value ), value );
 	}
 	assert.deepEqual( defaultAudioOptions(), { ...initialAudioOptions(), bgm: 50 } );
-	assert.equal( audioSliderPosition( quiet.effects, true ), 6 );
+	assert.equal( audioSliderPosition( quiet.effects ), 6 );
 	assert.equal( quiet.effects, .123456789 );
 	for ( const bad of [ null, [], {}, { ...original, muteBgm: 1 } ] ) assert.throws( () => audioOptions( bad ) );
 	for ( const bad of [ -1, 101, 1.1, 50.5, NaN, Infinity, "0.1", undefined ] ) {
@@ -92,20 +100,13 @@ test("old integer and new fractional records retain their values and mute flags"
 
 /*
 ================
-explicit opt-in
+labels and bounds
 ================
 */
-test("disabled quiet levels are retained silently and never raised to the native minimum", () => {
-	for ( const value of [ null, {}, { extendedQuietAudio: 1 }, { extendedQuietAudio: "true" } ] ) {
-		assert.equal( experimentalOptions( value ).extendedQuietAudio, false );
-	}
-	assert.equal( experimentalOptions( { extendedQuietAudio: true } ).extendedQuietAudio, true );
-	assert.equal( effectiveAudioLevel( .2, false ), 0 );
-	assert.equal( effectiveAudioLevel( .2, true ), .2 );
-	assert.equal( audioSliderPosition( .2, false ), 0 );
-	assert.match( audioLevelText( .2, false, false ), /retained; enable/ );
-	assert.equal( audioLevelText( 1, false, true ), "SRO level 1" );
-	assert.equal( audioLevelText( .1, true, true ), "Quiet 0.1 (muted)" );
-	for ( const bad of [ -1, .5, 150, NaN, Infinity ] ) assert.throws( () => audioSliderLevel( bad, true ) );
-	assert.throws( () => stepAudioLevel( 1, 0, true ) );
+test("slider labels name the level, and bad positions and steps are refused", () => {
+	assert.equal( audioLevelText( 0, false ), "Silent" );
+	assert.equal( audioLevelText( 1, false ), "SRO level 1" );
+	assert.equal( audioLevelText( .1, true ), "Quiet 0.1 (muted)" );
+	for ( const bad of [ -1, .5, 150, NaN, Infinity ] ) assert.throws( () => audioSliderLevel( bad ) );
+	assert.throws( () => stepAudioLevel( 1, 0 ) );
 });
