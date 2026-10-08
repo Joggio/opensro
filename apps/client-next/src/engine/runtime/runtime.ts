@@ -183,6 +183,7 @@ export function startRuntime(
 				renderer.experimentalVideo( experimentalVideo( event.value ) );
 				world.setTerrainNormals( experimentalVideo( event.value ).terrainRelief );
 				frontend.setTerrainNormals( experimentalVideo( event.value ).terrainRelief );
+				audio.extendedQuietAudio( event.value.extendedQuietAudio );
 			}
 			if ( event.kind === "audio-preferences" ) audio.options( event.value );
 			if ( event.kind === "chat-blocks" ) simulation.session( { kind: "chat-blocks", value: event.value } );

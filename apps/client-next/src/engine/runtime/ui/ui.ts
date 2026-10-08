@@ -354,6 +354,13 @@ import {
 	audioOptions,
 	type AudioOptions
 } from "@/engine/foundation/audio/options";
+import {
+	audioSliderMax,
+	audioSliderLevel,
+	audioSliderPosition,
+	stepAudioLevel,
+	audioLevelText
+} from "@/engine/foundation/audio/volume-control";
 import { chatScrollbar } from "@/engine/foundation/ui/chat-scrollbar";
 import { overheadLayout } from "@/engine/foundation/ui/overhead-layout";
 import { vitalWarning } from "@/engine/foundation/ui/vital-warning";
@@ -2286,10 +2293,14 @@ export function createUi(
 			}
 		} else if ( id.startsWith( "option-audio-step:" ) ) {
 			const [, key, delta] = id.split( ":" );
-			if ( key === "bgm" || key === "effects" || key === "environment" ) {
+			if ( (key === "bgm" || key === "effects" || key === "environment") && (delta === "-1" || delta === "1") ) {
 				updateAudioDraft( {
 					...audioDraft,
-					[key]: Math.max( 0, Math.min( 100, audioDraft[key] + Number( delta ) ) )
+					[key]: stepAudioLevel(
+						audioDraft[key],
+						Number( delta ),
+						experimental.state().saved.extendedQuietAudio
+					)
 				} );
 			}
 		} else if ( id === "option-default" ) {
@@ -5455,10 +5466,11 @@ export function createUi(
 					}
 				} else if ( event.id.startsWith( "option-audio:" ) && panel === "Option" ) {
 					const key = event.id.slice( 13 ), n = Number( event.value );
+					const extended = experimental.state().saved.extendedQuietAudio;
 					if (
 						(key === "bgm" || key === "effects" || key === "environment") && Number.isInteger( n ) &&
-						n >= 0 && n <= 100
-					) updateAudioDraft( { ...audioDraft, [key]: n } );
+						n >= 0 && n <= audioSliderMax( extended )
+					) updateAudioDraft( { ...audioDraft, [key]: audioSliderLevel( n, extended ) } );
 				} else if ( event.id.startsWith( "potion-percent:" ) ) {
 					const key = event.id.slice( 15 ), percent = Number( event.value );
 					if (
@@ -9176,7 +9188,7 @@ export function createUi(
 					const layout = hudData.windows.ifoption!, slot = hudData.windows.ifgameoptionslot!;
 					windowBox( "Experimental", px, py, width, height );
 					closeButton( px + width - 26, py + 10 );
-					const tabWidth = 78, tabStart = (width - (EXPERIMENTAL_TABS.length * tabWidth - 2)) / 2;
+					const tabWidth = 70, tabStart = (width - (EXPERIMENTAL_TABS.length * tabWidth - 2)) / 2;
 					for ( let i = 0; i < EXPERIMENTAL_TABS.length; i++ ) {
 						nativeTab(
 							"experimental-tab:" + i,
@@ -9573,6 +9585,7 @@ export function createUi(
 						}
 					}
 					if ( optionTab === 1 ) {
+						const extended = experimental.state().saved.extendedQuietAudio;
 						for (
 							const [i, key, mute] of [ [ 0, "bgm", "muteBgm" ], [ 1, "effects", "muteEffects" ], [
 								2,
@@ -9588,6 +9601,9 @@ export function createUi(
 								c = authoredRect( check, ox, oy ),
 								path = ROOT + "interface/ifcommon/com_radiobutton_" +
 									(audioDraft[mute] ? "on" : "off") + ".png";
+							const position = audioSliderPosition( audioDraft[key], extended ),
+								max = audioSliderMax( extended );
+							const valueText = audioLevelText( audioDraft[key], audioDraft[mute], extended );
 							paths.push( path );
 							if ( resources.has( path ) ) rect( c, white, path );
 							authoredText( muteLabel, ox, oy, hudCopy( muteLabel.text ) );
@@ -9604,14 +9620,16 @@ export function createUi(
 								kind: "range",
 								rect: [ r[0], r[1], 202, 16 ],
 								min: 0,
-								max: 100,
-								value: String( audioDraft[key] )
+								max,
+								value: String( position ),
+								valueText,
+								helpText: valueText
 							} );
 							const thumb = ROOT + "interface/ifcommon/com_scroll_button.png";
 							paths.push( thumb );
 							if ( resources.has( thumb ) ) {
 								rect(
-									[ r[0] + Math.trunc( audioDraft[key] * 186 / 100 ), r[1], 16, 16 ],
+									[ r[0] + Math.trunc( position * 186 / max ), r[1], 16, 16 ],
 									white,
 									thumb
 								);
@@ -9630,7 +9648,7 @@ export function createUi(
 											" +"),
 									kind: "button",
 									rect: a,
-									disabled: delta < 0 ? audioDraft[key] === 0 : audioDraft[key] === 100
+									disabled: delta < 0 ? position === 0 : position === max
 								} );
 							}
 						}
